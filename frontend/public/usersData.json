@@ -1,0 +1,14 @@
+[
+  {
+    "username": "admin",
+    "fullName": "admin admin",
+    "email": "admin@admin.com",
+    "password": "admin"
+  },
+  {
+    "username": "nemanja_djukic",
+    "fullName": "Nemanja Djukic",
+    "email": "nd@nd",
+    "password": "athletex"
+  }
+]
