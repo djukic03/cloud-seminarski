@@ -31,7 +31,7 @@ services:
     restart: unless-stopped
 
   database:
-    image: mysql:latest
+    image: mysql:8.0
     container_name: athlete-x-database
     env_file:
       - ./database/env/database.env
