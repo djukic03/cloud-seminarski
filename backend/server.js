@@ -13,11 +13,14 @@ app.post("/api/register", async (req, res) => {
   const userData = req.body;
 
   try {
-    const data = await readFile("./public/usersData.json", "utf8");
+    const data = await readFile("../frontend/public/usersData.json", "utf8");
     const users = JSON.parse(data);
     users.push(userData);
 
-    await writeFile("./public/usersData.json", JSON.stringify(users, null, 2));
+    await writeFile(
+      "../frontend/public/usersData.json",
+      JSON.stringify(users, null, 2)
+    );
     res.send("User registered successfully");
   } catch (err) {
     console.error("Error handling file:", err);
@@ -29,7 +32,7 @@ app.put("/api/updateUser", async (req, res) => {
   const { username, fullName, email } = req.body;
 
   try {
-    const data = await readFile("./public/usersData.json", "utf8");
+    const data = await readFile("../frontend/public/usersData.json", "utf8");
     const users = JSON.parse(data);
     const userIndex = users.findIndex((user) => user.username === username);
     if (userIndex === -1) {
@@ -42,7 +45,10 @@ app.put("/api/updateUser", async (req, res) => {
       email,
     };
 
-    await writeFile("./public/usersData.json", JSON.stringify(users, null, 2));
+    await writeFile(
+      "../frontend/public/usersData.json",
+      JSON.stringify(users, null, 2)
+    );
     res.send("User updated successfully");
   } catch (err) {
     console.error("Error handling file:", err);
