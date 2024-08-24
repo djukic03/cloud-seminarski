@@ -1,0 +1,64 @@
+name: "athlete-x"
+services:
+  frontend:
+    build: ./frontend
+    container_name: athlete-x-frontend
+    networks:
+      - athlete-x-network
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - 5173:5173
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    container_name: athlete-x-backend
+    env_file:
+      - ./backend/env/backend.env
+    networks:
+      - athlete-x-network
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    ports:
+      - 5000:5000
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: unless-stopped
+
+  database:
+    image: mysql:latest
+    container_name: athlete-x-database
+    env_file:
+      - ./database/env/database.env
+    networks:
+      - athlete-x-network
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/my.cnf:/etc/mysql/conf.d/my-custom.cnf:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "username",
+          "--password=password",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 6
+
+networks:
+  athlete-x-network:
+    driver: bridge
+volumes:
+  mysql-data:
