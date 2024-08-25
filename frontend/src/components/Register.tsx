@@ -28,11 +28,12 @@ const Register: React.FC = () => {
     const { username, firstName, lastName, email, password, retypePassword } = formData;
 
     try {
-      const response = await axios.get<User[]>('/usersData.json');
+      const response = await axios.get<User[]>('http://localhost:5000/users');
       const users = response.data;
       const sameUsername = users.find(u => u.username === username);
-      if (sameUsername) {
-        alert('Username already exists');
+      const sameEmail = users.find(u => u.email === email);
+      if (sameUsername || sameEmail) {
+        alert('This username or email are already used!');
         return;
       }
     } catch (error) {
@@ -52,7 +53,7 @@ const Register: React.FC = () => {
     };
 
     try {
-      const response = await axios.post('http://localhost:5000/api/register', userData);
+      const response = await axios.post('http://localhost:5000/users', userData);
       console.log('Data saved successfully:', response.data);
       navigate('/login');
     } catch (error) {

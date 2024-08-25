@@ -20,7 +20,7 @@ const Login: React.FC = () => {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
-      const response = await axios.get<User[]>('/usersData.json');
+      const response = await axios.get<User[]>('http://localhost:5000/users');
       const users = response.data;
       const loggedInUser = users.find(u => u.username === username && u.password === password);
       if (loggedInUser) {

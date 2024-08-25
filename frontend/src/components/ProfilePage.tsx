@@ -47,7 +47,7 @@ const ProfilePage: React.FC = () => {
     e.preventDefault();
 
     try{
-      const response = await axios.put("http://localhost:5000/api/updateUser",{
+      const response = await axios.put("http://localhost:5000/users",{
         username,
         fullName: `${firstName} ${lastName}`,
         email
@@ -109,7 +109,7 @@ const ProfilePage: React.FC = () => {
     if (selectedExercise) {
       const fetchData = async () => {
         try {
-          const response = await axios.get('/workouts.json');
+          const response = await axios.get(`http://localhost:5000/workouts/${username}`);
           setWorkouts(response.data);
         } catch (error) {
           console.error(error);
@@ -121,9 +121,7 @@ const ProfilePage: React.FC = () => {
 
   useEffect(() => {
     if (workouts.length > 0 && selectedExercise) {
-      const workoutsFromUser = workouts.filter(workout => workout.username === username);
-
-      const maxWeightWorkouts = workoutsFromUser.map(workout => {
+        const maxWeightWorkouts = workouts.map(workout => {
         const exerciseData = workout.workoutData.filter(data => data.exercise === selectedExercise);
         const maxWeight = exerciseData.length > 0 ? Math.max(...exerciseData.map(data => data.weight)) : 0;
         return {
@@ -137,7 +135,7 @@ const ProfilePage: React.FC = () => {
         ...maxWeightWorkouts.map(workout => [workout.date, workout.maxWeight]),
       ]);
 
-      const maxRepsWorkouts = workoutsFromUser.map(workout => {
+      const maxRepsWorkouts = workouts.map(workout => {
         const exerciseData = workout.workoutData.filter(data => data.exercise === selectedExercise);
         const maxReps = exerciseData.length > 0 ? Math.max(...exerciseData.map(data => data.reps)) : 0;
         return {
@@ -151,7 +149,7 @@ const ProfilePage: React.FC = () => {
         ...maxRepsWorkouts.map(workout => [workout.date, workout.maxReps]),
       ]);
 
-      const maxVolumeWorkouts = workoutsFromUser.map(workout => {
+      const maxVolumeWorkouts = workouts.map(workout => {
         const exerciseData = workout.workoutData.filter(data => data.exercise === selectedExercise);
         const maxVolume = exerciseData.length > 0 ? Math.max(...exerciseData.map(data => data.reps*data.weight)) : 0;
         return {

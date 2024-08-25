@@ -63,7 +63,7 @@ connection.connect((err) => {
   });
 
   const insertIntoUsersTableQuery = `
-    INSERT INTO users (username, fullName, email, password) VALUES ("admin", "admin admin", "admin@admin.com", "admin")
+    INSERT IGNORE INTO users (username, fullName, email, password) VALUES ("admin", "admin admin", "admin@admin.com", "admin")
   `;
   connection.query(insertIntoUsersTableQuery, (err, result) => {
     if (err) throw err;
@@ -78,80 +78,142 @@ app.get("/users", (req, res) => {
   });
 });
 
-/* ***********************************************************
-
-  ODAVDE NA DOLE NE VALJA
-
-************************************************************** */
-
-app.post("/api/register", async (req, res) => {
+app.post("/users", (req, res) => {
   const { username, fullName, email, password } = req.body;
-
-  try {
-    const connection = await pool.getConnection();
-    const [result] = await connection.execute(
-      "INSERT INTO users (username, fullName, email, password) VALUES (?, ?, ?, ?)",
-      [username, fullName, email, password]
-    );
-    connection.release();
-    res.send("User registered successfully");
-  } catch (err) {
-    console.error("Error handling database:", err);
-    res.status(500).send("Server Error");
-  }
+  const query =
+    "INSERT INTO users (username, fullName, email, password) VALUES (?, ?, ?, ?)";
+  connection.query(
+    query,
+    [username, fullName, email, password],
+    (error, result) => {
+      if (error) throw error;
+      res.status(201).send(`User ${result.insertId} registered successfully`);
+    }
+  );
 });
 
-app.put("/api/updateUser", async (req, res) => {
+app.put("/users", (req, res) => {
   const { username, fullName, email } = req.body;
-
-  try {
-    const connection = await pool.getConnection();
-    const [result] = await connection.execute(
-      "UPDATE users SET fullName = ?, email = ? WHERE username = ?",
-      [fullName, email, username]
-    );
-    connection.release();
-
-    if (result.affectedRows === 0) {
-      return res.status(404).send("User not found");
-    }
-
-    res.send("User updated successfully");
-  } catch (err) {
-    console.error("Error handling database:", err);
-    res.status(500).send("Server Error");
-  }
+  const query = "UPDATE users SET fullName = ?, email = ? WHERE username = ?";
+  connection.query(query, [fullName, email, username], (error, results) => {
+    if (error) throw error;
+    res.send(`User ${username} updated.`);
+  });
 });
 
-app.post("/api/saveWorkout", async (req, res) => {
+app.post("/workouts", (req, res) => {
   const { username, date, workoutData } = req.body;
+  const workout_ids = [];
 
-  try {
-    const connection = await pool.getConnection();
+  let workoutCount = workoutData.length;
+  let completedWorkouts = 0;
 
-    const workoutIds = [];
-    for (const workout of workoutData) {
-      const { exercise, reps, sets, weight } = workout;
-      const [result] = await connection.execute(
-        "INSERT INTO workouts (exercise, reps, sets, weight) VALUES (?, ?, ?, ?)",
-        [exercise, reps, sets, weight]
-      );
-      workoutIds.push(result.insertId);
+  workoutData.forEach((workout) => {
+    const { exercise, reps, set, weight } = workout;
+    const query =
+      "INSERT INTO workouts (exercise, reps, sets, weight) VALUES (?, ?, ?, ?)";
+
+    connection.query(query, [exercise, reps, set, weight], (error, result) => {
+      if (error) throw error;
+      workout_ids.push(result.insertId);
+
+      completedWorkouts++;
+      if (completedWorkouts === workoutCount) {
+        workout_ids.forEach((workout_id) => {
+          const query =
+            "INSERT INTO users_workouts (username, date, workout_id) VALUES (?, ?, ?)";
+          connection.query(
+            query,
+            [username, date, workout_id],
+            (error, result) => {
+              if (error) throw error;
+            }
+          );
+        });
+
+        res.status(201).send("All workouts inserted successfully");
+      }
+    });
+  });
+});
+
+app.get("/workouts/:username", (req, res) => {
+  const { username } = req.params;
+
+  const query = `
+    SELECT uw.date, w.exercise, w.reps, w.sets, w.weight
+    FROM users_workouts uw
+    JOIN workouts w ON uw.workout_id = w.id
+    WHERE uw.username = ?
+    ORDER BY uw.date;
+  `;
+
+  connection.query(query, [username], (error, results) => {
+    if (error) {
+      console.error("Error fetching workouts:", error);
+      return res.status(500).send("Server Error");
     }
 
-    for (const workoutId of workoutIds) {
-      await connection.execute(
-        "INSERT INTO users_workouts (username, date, workout_id) VALUES (?, ?, ?)",
-        [username, date, workoutId]
-      );
+    if (results.length === 0) {
+      return res.status(404).send("No workouts found for this user");
     }
 
-    connection.release();
-    res.send("Workout saved successfully");
-  } catch (err) {
-    console.error("Error handling database:", err);
-    res.status(500).send("Server Error");
-  }
+    const workoutDataByDate = results.reduce((acc, row) => {
+      const { date, exercise, reps, sets, weight } = row;
+
+      if (!acc[date]) {
+        acc[date] = [];
+      }
+
+      acc[date].push({ exercise, reps, sets, weight });
+
+      return acc;
+    }, {});
+
+    const structuredData = Object.keys(workoutDataByDate).map((date) => ({
+      username: username,
+      date: date,
+      workoutData: workoutDataByDate[date],
+    }));
+
+    res.status(200).json(structuredData);
+  });
+});
+
+// app.get("/workouts", (req, res) => {
+//   connection.query("SELECT * FROM workouts", (err, results) => {
+//     if (err) throw err;
+//     res.send(results);
+//   });
+// });
+
+// app.get("/users_workouts", (req, res) => {
+//   connection.query("SELECT * FROM users_workouts", (err, results) => {
+//     if (err) throw err;
+//     res.send(results);
+//   });
+// });
+
+app.delete("/workouts", (req, res) => {
+  const query = "DELETE FROM workouts;";
+  connection.query(query, (error, results) => {
+    if (error) throw error;
+    res.send(`Workouts deleted`);
+  });
+});
+app.delete("/users_workouts", (req, res) => {
+  const query = "DELETE FROM users_workouts;";
+  connection.query(query, (error, results) => {
+    if (error) throw error;
+    res.send(`Workouts deleted`);
+  });
+});
+app.delete("/users", (req, res) => {
+  const query = "DELETE FROM users;";
+  connection.query(query, (error, results) => {
+    if (error) throw error;
+    res.send(`Users deleted`);
+  });
 });
 
 app.listen(port, () => {
